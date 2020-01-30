@@ -1,7 +1,9 @@
 const router = require('express').Router()
 const bcrypt = require('bcryptjs')
 const jwt = require('jsonwebtoken')
-const User = require('../model/User')
+const Cryptr = require('cryptr')
+const User = require('../models/User')
+const cryptr = new Cryptr(process.env.CRYPTR_KEY)
 const { registerValidation, loginValidation } = require('../validation')
 
 
@@ -40,8 +42,10 @@ router.post('/login', async (req, res) => {
     if(!user || !validPass) return res.status(400).send("User with entered credentials doesn't exist!")
 
     const token = jwt.sign({_id: user._id}, process.env.JWT_SECRET)
-
-    res.header("Auth-token", token).send(user)
+    if(user.notes.length !== 0)user.notes.forEach(note => {
+        note.content = cryptr.decrypt(note.content)
+    });
+    res.header("Auth-token", token).send({user})
 })
 
 
