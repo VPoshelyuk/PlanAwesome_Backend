@@ -1,5 +1,6 @@
 const router = require('express').Router()
 const Cryptr = require('cryptr')
+const mongodb = require("mongodb")
 const Note = require('../models/Note')
 const User = require('../models/User')
 const cryptr = new Cryptr(process.env.CRYPTR_KEY)
@@ -11,7 +12,7 @@ router.post('/add', async (req, res) => {
         content: cryptr.encrypt(req.body.content)
     })
     note.save()
-    let user = User.findByIdAndUpdate(
+    User.findByIdAndUpdate(
         req.body.user_id,
         {
         $push: {
@@ -32,41 +33,46 @@ router.post('/add', async (req, res) => {
         }
     )
 
-    // const { error } = registerValidation(req.body)
-    // if(error) return res.status(400).send(error.details[0].message)
-    
-    // const emailExists = await User.findOne({email: req.body.email})
-    // if(emailExists) return res.status(400).send("Email already exists!")
-
-    // const salt = await bcrypt.genSalt(3)
-    // const hashedPassword = await bcrypt.hash(req.body.password, salt)
-
-    // const user = new User({
-    //     first_name: req.body.first_name,
-    //     last_name: req.body.last_name,
-    //     email: req.body.email,
-    //     password: hashedPassword
-    // })
-    // try {
-    //     const svdUser = await user.save()
-    //     res.send(svdUser)
-    // } catch (er) {
-    //     res.status(400).send(er)
-    // }
 })
 
 router.delete('/remove', async (req, res) => {
-    
-    // const { error } = loginValidation(req.body)
-    // if(error) return res.status(400).send(error.details[0].message)
-    
-    // const user = await User.findOne({email: req.body.email})
-    // const validPass = await bcrypt.compare(req.body.password, user.password)
-    // if(!user || !validPass) return res.status(400).send("User with entered credentials doesn't exist!")
-
-    // const token = jwt.sign({_id: user._id}, process.env.JWT_SECRET)
-
-    // res.header("Auth-token", token).send(user)
+    let note_id = new mongodb.ObjectID(req.body.note_id)
+    const user = await User.findByIdAndUpdate(
+        req.body.user_id,
+        {
+        $pull: { 
+            notes : {
+                _id : {$in: [note_id]}
+            } 
+        }
+        },
+        { useFindAndModify: false });
+    Note.deleteOne({_id: note_id}, function(error, results) {
+            if (error){
+                return res.send(error);
+            }
+            console.log("success");
+         })
+        try {
+            const svdUser = await User.findById(req.body.user_id)
+            res.send(svdUser)
+        } catch (er) {
+            res.status(400).send(er)
+        }
+        // ,
+        // async function (err, model) {
+        //   if (err) {
+        //     return res.send(err);
+        //   }
+        //   Note.deleteOne({_id: note_id}, function(error, results) {
+        //     if (error){
+        //         return res.send(error);
+        //     }
+        //     console.log("success");
+        //  })
+        //   const svdUser = await user.save()
+        //   return res.send(svdUser);
+        // }
 })
 
 module.exports = router
