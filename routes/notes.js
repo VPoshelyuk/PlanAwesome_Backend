@@ -35,6 +35,27 @@ router.post('/add', async (req, res) => {
 
 })
 
+router.patch('/update', async (req, res) => {
+    let note = await Note.updateOne({'_id': new mongodb.ObjectID(req.body.note_id)},
+    {$set:{
+        title: req.body.title,
+        content: req.body.content
+    }})
+    let user = await User.updateOne(
+        { _id : new mongodb.ObjectID(req.body.user_id), "notes._id": new mongodb.ObjectID(req.body.note_id)},
+        { $set: { 
+            "notes.$.title" : req.body.title,
+            "notes.$.content": req.body.content
+        }}
+    )
+    try {
+        const svdUser = await user.save()
+        res.send(note)
+    } catch (er) {
+        res.status(400).send(er)
+    } 
+})
+
 router.delete('/remove', async (req, res) => {
     let note_id = new mongodb.ObjectID(req.body.note_id)
     const user = await User.findByIdAndUpdate(
@@ -59,20 +80,6 @@ router.delete('/remove', async (req, res) => {
         } catch (er) {
             res.status(400).send(er)
         }
-        // ,
-        // async function (err, model) {
-        //   if (err) {
-        //     return res.send(err);
-        //   }
-        //   Note.deleteOne({_id: note_id}, function(error, results) {
-        //     if (error){
-        //         return res.send(error);
-        //     }
-        //     console.log("success");
-        //  })
-        //   const svdUser = await user.save()
-        //   return res.send(svdUser);
-        // }
 })
 
 module.exports = router
